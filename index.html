@@ -1,11 +1,706 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>ระบบจัดการสินค้า - เชื่อมต่อกับ Express API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        .api-status {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        
+        .status-connected {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        
+        .status-disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+        
+        .api-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            background: #f8f9ff;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .api-title {
+            font-size: 1.5rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+        
+        .btn-success {
+            background: linear-gradient(45deg, #27ae60, #229954);
+        }
+        
+        input, select, textarea {
+            padding: 10px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .product-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            border: 2px solid transparent;
+            position: relative;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-5px);
+            border-color: #667eea;
+        }
+        
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(45deg, #f0f0f0, #e0e0e0);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 14px;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="%23999" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>');
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        
+        .product-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .product-description {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.4;
+            font-size: 14px;
+        }
+        
+        .product-id {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .product-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .product-actions button {
+            flex: 1;
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+            padding: 20px;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .api-endpoint {
+            background: #1a202c;
+            color: #63b3ed;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .response-display {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin-top: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-weight: 600;
+        }
+    </style>
 </head>
 <body>
-    
+    <div class="container">
+        <h1>🚀 ระบบจัดการสินค้า</h1>
+        <div class="api-status" id="apiStatus">
+            <span id="statusText">🔄 กำลังตรวจสอบการเชื่อมต่อ API...</span>
+        </div>
+        
+        <!-- API Info -->
+        <div class="api-section">
+            <h2 class="api-title">📡 API Endpoints (Express Server)</h2>
+            <div class="api-endpoint">GET http://localhost:3000/products - ดึงข้อมูลสินค้าทั้งหมด</div>
+            <div class="api-endpoint">GET http://localhost:3000/products/:id - ดึงข้อมูលสินค้าตาม ID</div>
+            <div class="api-endpoint">POST http://localhost:3000/products - เพิ่มสินค้าใหม่</div>
+            <div class="api-endpoint">PUT http://localhost:3000/products/:id - แก้ไขข้อมูลสินค้า</div>
+            <div class="api-endpoint">DELETE http://localhost:3000/products/:id - ลบสินค้า</div>
+        </div>
+        
+        <!-- Statistics -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalProducts">-</div>
+                <div class="stat-label">สินค้าทั้งหมด</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalRequests">0</div>
+                <div class="stat-label">คำขอ API ทั้งหมด</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="lastUpdate">-</div>
+                <div class="stat-label">อัปเดตล่าสุด</div>
+            </div>
+        </div>
+        
+        <!-- Product Management -->
+        <div class="api-section">
+            <h2 class="api-title">🔍 ค้นหาและแสดงสินค้า</h2>
+            <div class="controls">
+                <button onclick="getAllProducts()">📦 ดึงข้อมูลทั้งหมด</button>
+                <input type="number" id="searchId" placeholder="ID สินค้า" min="1">
+                <button onclick="getProductById()">🔎 ค้นหาตาม ID</button>
+                <button onclick="refreshData()">🔄 รีเฟรช</button>
+            </div>
+            <div id="messageArea"></div>
+        </div>
+        
+        <!-- Add New Product -->
+        <div class="api-section">
+            <h2 class="api-title">➕ เพิ่มสินค้าใหม่</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>ชื่อสินค้า *:</label>
+                    <input type="text" id="newName" placeholder="ชื่อสินค้า" required>
+                </div>
+                <div class="form-group">
+                    <label>URL รูปภาพ *:</label>
+                    <input type="url" id="newImageUrl" placeholder="https://example.com/image.jpg" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>คำอธิบาย *:</label>
+                <textarea id="newDescription" placeholder="คำอธิบายสินค้า" rows="3" required></textarea>
+            </div>
+            <button onclick="addProduct()" class="btn-success">✅ เพิ่มสินค้า</button>
+        </div>
+        
+        <!-- Update Product -->
+        <div class="api-section">
+            <h2 class="api-title">✏️ แก้ไขสินค้า</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>ID สินค้าที่ต้องการแก้ไข:</label>
+                    <input type="number" id="updateId" placeholder="ID สินค้า" min="1">
+                </div>
+                <div class="form-group">
+                    <label>ชื่อสินค้าใหม่:</label>
+                    <input type="text" id="updateName" placeholder="ชื่อสินค้าใหม่">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>คำอธิบายใหม่:</label>
+                <textarea id="updateDescription" placeholder="คำอธิบายใหม่" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+                <label>URL รูปภาพใหม่:</label>
+                <input type="url" id="updateImageUrl" placeholder="https://example.com/new-image.jpg">
+            </div>
+            <button onclick="updateProduct()" class="btn-success">💾 บันทึกการแก้ไข</button>
+        </div>
+        
+        <!-- Products Display -->
+        <div class="api-section">
+            <h2 class="api-title">📋 รายการสินค้า</h2>
+            <div id="productsContainer">
+                <div class="loading">กำลังโหลดข้อมูล...</div>
+            </div>
+        </div>
+        
+        <!-- API Response -->
+        <div class="api-section">
+            <h2 class="api-title">📄 API Response Log</h2>
+            <div class="response-display" id="responseDisplay">รอการเรียก API...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3000';
+        let requestCount = 0;
+        let isApiConnected = false;
+
+        // ตรวจสอบการเชื่อมต่อ API
+        async function checkApiConnection() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/products`);
+                if (response.ok) {
+                    isApiConnected = true;
+                    updateApiStatus(true);
+                    return true;
+                } else {
+                    throw new Error('API returned error');
+                }
+            } catch (error) {
+                isApiConnected = false;
+                updateApiStatus(false);
+                return false;
+            }
+        }
+
+        function updateApiStatus(connected) {
+            const statusElement = document.getElementById('apiStatus');
+            const statusText = document.getElementById('statusText');
+            
+            if (connected) {
+                statusElement.className = 'api-status status-connected';
+                statusText.textContent = '✅ เชื่อมต่อกับ Express API สำเร็จ (localhost:3000)';
+            } else {
+                statusElement.className = 'api-status status-disconnected';
+                statusText.textContent = '❌ ไม่สามารถเชื่อมต่อกับ Express API ได้ - กรุณาเริ่ม server ด้วย "node app.js"';
+            }
+        }
+
+        function updateStats(totalProducts = null) {
+            if (totalProducts !== null) {
+                document.getElementById('totalProducts').textContent = totalProducts;
+            }
+            document.getElementById('totalRequests').textContent = requestCount;
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('th-TH');
+        }
+
+        function showMessage(message, type = 'info') {
+            const messageArea = document.getElementById('messageArea');
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            messageArea.innerHTML = `<div class="${className}">${message}</div>`;
+            setTimeout(() => {
+                messageArea.innerHTML = '';
+            }, 5000);
+        }
+
+        function displayResponse(data, method, endpoint) {
+            requestCount++;
+            const responseDisplay = document.getElementById('responseDisplay');
+            const timestamp = new Date().toLocaleString('th-TH');
+            
+            const logEntry = `
+[${timestamp}] ${method} ${endpoint}
+Response: ${JSON.stringify(data, null, 2)}
+${'='.repeat(80)}
+            `;
+            
+            responseDisplay.innerHTML = logEntry + responseDisplay.innerHTML;
+            updateStats();
+        }
+
+        function displayProducts(products) {
+            const container = document.getElementById('productsContainer');
+            
+            if (!products || products.length === 0) {
+                container.innerHTML = '<div class="loading">ไม่มีข้อมูลสินค้า</div>';
+                return;
+            }
+
+            const productsHTML = products.map(product => `
+                <div class="product-card">
+                    <div class="product-id">ID: ${product.id}</div>
+                    <div class="product-image">
+                        <img src="${product.imageUrl}" alt="${product.name}" 
+                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px;"
+                             onerror="this.style.display='none'; this.parentElement.style.backgroundImage='url(data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;48&quot; height=&quot;48&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;%23999&quot; stroke-width=&quot;1&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;><rect x=&quot;3&quot; y=&quot;3&quot; width=&quot;18&quot; height=&quot;18&quot; rx=&quot;2&quot; ry=&quot;2&quot;/><circle cx=&quot;9&quot; cy=&quot;9&quot; r=&quot;2&quot;/><path d=&quot;M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21&quot;/></svg>)';">
+                    </div>
+                    <div class="product-name">${product.name}</div>
+                    <div class="product-description">${product.description}</div>
+                    <div class="product-actions">
+                        <button onclick="editProduct(${product.id})" class="btn-success">✏️ แก้ไข</button>
+                        <button onclick="deleteProduct(${product.id})" class="btn-danger">🗑️ ลบ</button>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = `<div class="product-grid">${productsHTML}</div>`;
+        }
+
+        // API Functions
+        async function getAllProducts() {
+            if (!isApiConnected) {
+                showMessage('ไม่สามารถเชื่อมต่อกับ API ได้', 'error');
+                return;
+            }
+
+            try {
+                document.getElementById('productsContainer').innerHTML = '<div class="loading">กำลังโหลดข้อมูล...</div>';
+                
+                const response = await fetch(`${API_BASE_URL}/products`);
+                const data = await response.json();
+                
+                displayResponse(data, 'GET', '/products');
+                displayProducts(data);
+                updateStats(data.length);
+                showMessage(`ดึงข้อมูลสินค้า ${data.length} รายการสำเร็จ`, 'success');
+            } catch (error) {
+                showMessage(`เกิดข้อผิดพลาด: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'GET', '/products');
+            }
+        }
+
+        async function getProductById() {
+            const id = document.getElementById('searchId').value;
+            if (!id) {
+                showMessage('กรุณาใส่ ID สินค้า', 'error');
+                return;
+            }
+
+            if (!isApiConnected) {
+                showMessage('ไม่สามารถเชื่อมต่อกับ API ได้', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/products/${id}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayResponse(data, 'GET', `/products/${id}`);
+                    displayProducts([data]);
+                    showMessage(`พบสินค้า ID ${id}`, 'success');
+                } else {
+                    const errorData = await response.json();
+                    displayResponse(errorData, 'GET', `/products/${id}`);
+                    showMessage(`ไม่พบสินค้า ID ${id}`, 'error');
+                    document.getElementById('productsContainer').innerHTML = '<div class="loading">ไม่พบสินค้าที่ค้นหา</div>';
+                }
+            } catch (error) {
+                showMessage(`เกิดข้อผิดพลาด: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'GET', `/products/${id}`);
+            }
+        }
+
+        async function addProduct() {
+            const name = document.getElementById('newName').value;
+            const description = document.getElementById('newDescription').value;
+            const imageUrl = document.getElementById('newImageUrl').value;
+
+            if (!name || !description || !imageUrl) {
+                showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+                return;
+            }
+
+            if (!isApiConnected) {
+                showMessage('ไม่สามารถเชื่อมต่อกับ API ได้', 'error');
+                return;
+            }
+
+            try {
+                const newProduct = { name, description, imageUrl };
+                
+                const response = await fetch(`${API_BASE_URL}/products`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(newProduct)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayResponse(data, 'POST', '/products');
+                    showMessage(`เพิ่มสินค้า "${name}" สำเร็จ (ID: ${data.id})`, 'success');
+                    
+                    // Clear form
+                    document.getElementById('newName').value = '';
+                    document.getElementById('newDescription').value = '';
+                    document.getElementById('newImageUrl').value = '';
+                    
+                    // Refresh products list
+                    getAllProducts();
+                } else {
+                    const errorData = await response.json();
+                    displayResponse(errorData, 'POST', '/products');
+                    showMessage(`เกิดข้อผิดพลาด: ${errorData.message}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`เกิดข้อผิดพลาด: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'POST', '/products');
+            }
+        }
+
+        async function updateProduct() {
+            const id = document.getElementById('updateId').value;
+            const name = document.getElementById('updateName').value;
+            const description = document.getElementById('updateDescription').value;
+            const imageUrl = document.getElementById('updateImageUrl').value;
+
+            if (!id) {
+                showMessage('กรุณาใส่ ID สินค้าที่ต้องการแก้ไข', 'error');
+                return;
+            }
+
+            if (!name && !description && !imageUrl) {
+                showMessage('กรุณากรอกข้อมูลที่ต้องการแก้ไขอย่างน้อย 1 ช่อง', 'error');
+                return;
+            }
+
+            if (!isApiConnected) {
+                showMessage('ไม่สามารถเชื่อมต่อกับ API ได้', 'error');
+                return;
+            }
+
+            try {
+                const updateData = {};
+                if (name) updateData.name = name;
+                if (description) updateData.description = description;
+                if (imageUrl) updateData.imageUrl = imageUrl;
+
+                const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updateData)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayResponse(data, 'PUT', `/products/${id}`);
+                    showMessage(`แก้ไขสินค้า ID ${id} สำเร็จ`, 'success');
+                    
+                    // Clear form
+                    document.getElementById('updateId').value = '';
+                    document.getElementById('updateName').value = '';
+                    document.getElementById('updateDescription').value = '';
+                    document.getElementById('updateImageUrl').value = '';
+                    
+                    // Refresh products list
+                    getAllProducts();
+                } else {
+                    const errorData = await response.json();
+                    displayResponse(errorData, 'PUT', `/products/${id}`);
+                    showMessage(`เกิดข้อผิดพลาด: ${errorData.message}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`เกิดข้อผิดพลาด: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'PUT', `/products/${id}`);
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm(`คุณต้องการลบสินค้า ID ${id} หรือไม่?`)) {
+                return;
+            }
+
+            if (!isApiConnected) {
+                showMessage('ไม่สามารถเชื่อมต่อกับ API ได้', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    displayResponse({ message: 'Product deleted successfully' }, 'DELETE', `/products/${id}`);
+                    showMessage(`ลบสินค้า ID ${id} สำเร็จ`, 'success');
+                    getAllProducts(); // Refresh list
+                } else {
+                    const errorData = await response.json();
+                    displayResponse(errorData, 'DELETE', `/products/${id}`);
+                    showMessage(`เกิดข้อผิดพลาด: ${errorData.message}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`เกิดข้อผิดพลาด: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'DELETE', `/products/${id}`);
+            }
+        }
+
+        function editProduct(id) {
+            document.getElementById('updateId').value = id;
+            document.getElementById('updateId').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function refreshData() {
+            await checkApiConnection();
+            if (isApiConnected) {
+                getAllProducts();
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', async () => {
+            await checkApiConnection();
+            if (isApiConnected) {
+                getAllProducts();
+            }
+            updateStats();
+        });
+
+        // Auto refresh connection status every 30 seconds
+        setInterval(checkApiConnection, 30000);
+    </script>
 </body>
 </html>
